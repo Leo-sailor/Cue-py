@@ -22,8 +22,11 @@ def add_folder():
 
 # add a song to the playlist
 def add_songs():
-    song_paths.append(filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),)))
-    song_names.append([os.path.splitext(os.path.basename(song))[0] for song in song_paths])
+    file_path = filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),))
+    if file_path == '':
+        return None
+    song_paths.append(file_path[0])
+    song_names.append(os.path.splitext(os.path.basename(file_path[0]))[0])
     songs_list.insert(tk.END, *song_names[-len(song_paths):])
 
 def delete_song():
