@@ -6,10 +6,11 @@ from tkinter import filedialog
 import os
 
 def addfolder():
-    songs=filedialog.askdirectory(initialdir="Music/",title="Choose a folder")
-    for song in os.listdir(songs):
-        s = os.path.splitext(os.path.basename(song))[0]
-        songs_list.insert(END,s)
+    folder_path=filedialog.askdirectory(initialdir="Music/",title="Choose a folder")
+    for song_file in os.listdir(folder_path):
+        if song_file.endswith(".mp3"):
+            song_name = os.path.splitext(os.path.basename(song_file))[0]
+            songs_list.insert(END, song_name)
 
 #add a song to the playlist
 def addsongs():
@@ -28,17 +29,25 @@ def Play():
     mixer.music.load(song)
     mixer.music.play()
 
-#to pause the song 
-def Pause():
-    mixer.music.pause()
-
-#to stop the  song 
+#to stop the  song
 def Stop():
     mixer.music.stop()
     songs_list.selection_clear(ACTIVE)
 
-#to resume the song
+#to toggle the song for pause and resume
+def toggle_play():
+    if mixer.music.get_busy():
+        print('Pausing')
+        mixer.music.pause()
+    else:
+        print('Playing')
+        mixer.music.unpause()
 
+#to pause the song
+def Pause():
+    mixer.music.pause()
+
+#to resume the song
 def Resume():
     mixer.music.unpause()
 
@@ -93,20 +102,20 @@ play_button=Button(root,text="Play",width =7,command=Play)
 play_button['font']=defined_font
 play_button.grid(row=1,column=0)
 
-#pause button 
-pause_button=Button(root,text="Pause",width =7,command=Pause)
-pause_button['font']=defined_font
-pause_button.grid(row=1,column=1)
-
 #stop button
 stop_button=Button(root,text="Stop",width =7,command=Stop)
 stop_button['font']=defined_font
-stop_button.grid(row=1,column=2)
+stop_button.grid(row=1,column=1)
+
+#pause button
+pause_button=Button(root,text="Pause",width =7,command=Pause)
+pause_button['font']=defined_font
+pause_button.grid(row=1,column=3)
 
 #resume button
 Resume_button=Button(root,text="Resume",width =7,command=Resume)
 Resume_button['font']=defined_font
-Resume_button.grid(row=1,column=3)
+Resume_button.grid(row=1,column=2)
 
 #previous button
 previous_button=Button(root,text="Prev",width =7,command=Previous)
@@ -127,5 +136,8 @@ add_song_menu.add_command(label="Add folder", command=addfolder)
 add_song_menu.add_command(label="Add songs",command=addsongs)
 add_song_menu.add_command(label="Delete song",command=deletesong)
 
+root.bind("<space>", lambda event: toggle_play())
+root.bind("<Return>", lambda event: Next())
+root.bind("<BackSpace>", lambda event: Previous())
 
 mainloop()
