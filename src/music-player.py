@@ -7,67 +7,115 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
-import wave
-
-# Global variables
-musicPlayer = None
-visualization_fig = None
-visualization_canvas = None
-slider = None
-
-# Function to create the musicPlayer window
-def create_musicPlayer_window():
-    global musicPlayer
-    musicPlayer = tk.Toplevel()
-    musicPlayer.title('Song Controller')
-    musicPlayer.protocol("WM_DELETE_WINDOW", on_musicPlayer_close)
-
-# Function to handle musicPlayer window closure
-def on_musicPlayer_close():
-    global musicPlayer
-    musicPlayer.destroy()
-    musicPlayer = None
-
-# Function to visualize audio using matplotlib
-def visualize_audio(file_path):
-    global visualization_fig, visualization_canvas
-    audio = wave.open(file_path, 'rb')
-    framerate = audio.getframerate()
-    samples = audio.readframes(-1)
-    samples = np.frombuffer(samples, dtype=np.int16)
-    time = np.linspace(0, len(samples) / framerate, num=len(samples))
-
-    visualization_fig, ax = plt.subplots(figsize=(8, 2))
-    ax.plot(time, samples)
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Amplitude')
-    visualization_canvas = FigureCanvasTkAgg(visualization_fig, master=musicPlayer)
-    visualization_canvas_widget = visualization_canvas.get_tk_widget()
-    visualization_canvas_widget.pack()
-
-    slider_label = tk.Label(musicPlayer, text="Playback Position:")
-    slider_label.pack()
-    global slider
-    slider = tk.Scale(musicPlayer, from_=0, to=1, orient="horizontal")
-    slider.set(0)
-    slider.pack()
+from pydub import AudioSegment
 
 
-# Function to update the slider position
-def update_slider_position():
-    if visualization_fig:
-        current_position = mixer.music.get_pos() / 1000  # Current position in seconds
-        slider.set(current_position)
-    root.after(100, update_slider_position)
+class MusicPlayer:
+    def __init__(self):
+        self.slider_update_id = None
+        self.playback_position = 0
+        self.counter = 0
+        self.slider_update_pending = False
+        self.musicPlayer = None
+        self.visualization_fig = None
+        self.visualization_canvas = None
+        self.slider = None
+        self.audio = None  # Store the loaded audio
 
-# Function to set audio position based on slider
-def set_position(event):
-    position = slider.get()
-    mixer.music.set_pos(position)
+    def create_musicPlayer_window(self, input_song):
+        self.musicPlayer = tk.Toplevel()
+        self.musicPlayer.title('Song Controller')
+        self.musicPlayer.protocol("WM_DELETE_WINDOW", self.on_musicPlayer_close)
+        self.visualize_audio(input_song)
+
+    def on_musicPlayer_close(self):
+        self.musicPlayer.destroy()
+        self.musicPlayer = None
+
+    def visualize_audio(self, file_path):
+        try:
+            print(file_path)
+            self.audio = AudioSegment.from_mp3(file_path)
+        except Exception as e:
+            print(f"Error loading audio file: {e}")
+            return
+
+        samples = np.array(self.audio.get_array_of_samples())
+        duration_seconds = self.audio.duration_seconds
+
+        # Create a placeholder for the visualization
+        self.visualization_canvas = None
+
+        def update_visualization():
+            nonlocal self
+            if self.visualization_canvas is None:
+                self.visualization_fig, ax = plt.subplots(figsize=(8, 2))
+                ax.plot(np.linspace(0, duration_seconds, num=len(samples)), samples)
+                ax.set_xlabel('Time (s)')
+                ax.set_ylabel('Amplitude')
+                ax.set_xlim(0, duration_seconds)  # Set x-axis limits to the duration of the song
+                ax.set_ylim(np.min(samples), np.max(samples))  # Set y-axis limits to min and max amplitudes
+                self.visualization_canvas = FigureCanvasTkAgg(self.visualization_fig, master=self.musicPlayer)
+                visualization_canvas_widget = self.visualization_canvas.get_tk_widget()
+                visualization_canvas_widget.pack()
+                self.musicPlayer.update_idletasks()  # Force GUI update
+
+        # Call the update_visualization function when needed (e.g., when the window is created)
+        update_visualization()
+
+        # Create a slider to control the playback position
+        slider_label = tk.Label(self.musicPlayer, text="Playback Position:")
+        slider_label.pack()
+
+        self.slider = tk.Scale(self.musicPlayer, from_=0, to=self.audio.duration_seconds, orient="horizontal",
+                               resolution=1)
+        self.slider.set(0)
+        self.slider.pack()
+
+        self.slider.bind("<Button-1>", lambda event: setattr(self, 'slider_update_pending', True))
+
+        # Bind the slider to a callback for ButtonRelease-1 event (slider release)
+        self.slider.bind("<ButtonRelease-1>", self.slider_released)
+
+        # Start periodic slider updates
+        self.update_slider_position()
+
+    def slider_released(self, event):
+        # This function is called when the slider is released by the user
+        self.update_audio_position(self.slider.get())
+        self.slider_update_pending = False  # Reset the flag
+        self.counter = 0
+        root.after_cancel(self.slider_update_id)
+        self.update_slider_position()
+
+    def update_slider_position(self):
+        # Update the slider position to reflect the current playback position
+        if not self.slider_update_pending:
+            self.counter += 1
+            current_position = self.playback_position + self.counter
+            print(current_position)
+            self.slider.set(current_position)
+            self.slider_update_id = root.after(1000, self.update_slider_position)
+
+    def update_audio_position(self, position):
+        print(position)
+        # Ensure there's an active audio playback
+        if self.audio is not None:
+            # Calculate the desired position in seconds based on the slider value
+            desired_position = float(position)
+
+            # Set the current position to the desired position
+            self.playback_position = desired_position
+
+            # set mixer to the desired position
+            mixer.music.set_pos(desired_position)
+            print(desired_position)
+
 
 # TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
 song_names = []
 song_paths = []
+music_player = MusicPlayer()
 
 
 def move_selection_up(*event):
@@ -129,7 +177,6 @@ def delete_song():
 
 
 def play():
-    global musicPlayer
     selected_index = songs_list.curselection()
     if selected_index:
         index = selected_index[0]
@@ -139,20 +186,19 @@ def play():
     mixer.music.load(song_path)
     mixer.music.play()
     songs_list.activate(index)
-    if not musicPlayer:
-        create_musicPlayer_window()
-    elif musicPlayer:
+    if music_player.musicPlayer is None:
+        music_player.create_musicPlayer_window(song_path)
+    elif music_player.musicPlayer is not None:
         # refresh_musicPlayer_window(song_path)
         pass
 
 
 # to stop the  song
 def stop():
-    global musicPlayer
     mixer.music.stop()
     songs_list.selection_clear(tk.ACTIVE)
-    if musicPlayer:
-        on_musicPlayer_close()
+    if music_player.musicPlayer is not None:
+        music_player.on_musicPlayer_close()
 
 
 # to toggle the song for pause and resume
