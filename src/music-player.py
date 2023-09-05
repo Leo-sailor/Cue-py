@@ -4,9 +4,41 @@ import tkinter as tk
 import tkinter.font as font
 from tkinter import filedialog
 import os
+
 # TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
 song_names = []
 song_paths = []
+
+
+def move_selection_up(*event):
+    current_index = songs_list.curselection()
+    if event == 'key':
+        songs_list.selection_set(current_index)
+    if current_index:
+        new_index = max(int(current_index[0]) - 1, 0)
+        if new_index == current_index[0]:
+            new_index = songs_list.size() - 1
+        songs_list.selection_clear(0, tk.END)
+        songs_list.selection_set(new_index)
+    else:
+        songs_list.selection_clear(0, tk.END)
+        songs_list.selection_set(0)
+
+
+def move_selection_down(*event):
+    current_index = songs_list.curselection()
+    if event == 'key':
+        songs_list.selection_set(current_index)
+    if current_index:
+        new_index = min(int(current_index[0]) + 1, songs_list.size() - 1)
+        if new_index == current_index[0]:
+            new_index = 0
+        songs_list.selection_clear(0, tk.END)
+        songs_list.selection_set(new_index)
+    else:
+        songs_list.selection_clear(0, tk.END)
+        songs_list.selection_set(0)
+
 
 def add_folder():
     folder_path = filedialog.askdirectory(initialdir="Music/", title="Choose a folder")
@@ -22,16 +54,19 @@ def add_folder():
 
 # add a song to the playlist
 def add_songs():
-    file_path = filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),))
+    file_path = filedialog.askopenfilename(initialdir="Music/", title="Choose a song",
+                                           filetypes=(("mp3 Files", "*.mp3"),))
     if file_path == '':
         return None
-    song_paths.append(file_path[0])
-    song_names.append(os.path.splitext(os.path.basename(file_path[0]))[0])
-    songs_list.insert(tk.END, *song_names[-len(song_paths):])
+    song_paths.append(file_path)
+    song_names.append(os.path.splitext(os.path.basename(file_path))[0])
+    songs_list.insert(tk.END, song_names[-1])
+
 
 def delete_song():
     curr_song = songs_list.curselection()
     songs_list.delete(curr_song[0])
+
 
 def play():
     selected_index = songs_list.curselection()
@@ -43,6 +78,7 @@ def play():
     mixer.music.load(song_path)
     mixer.music.play()
     songs_list.activate(index)
+
 
 # to stop the  song
 def stop():
@@ -70,35 +106,18 @@ def resume():
     mixer.music.unpause()
 
 
-# function to navigate from the current song
-def previous_song():
-    selected_index = songs_list.curselection()
-    if selected_index:
-        index = selected_index[0]
-        if index > 0:
-            songs_list.selection_clear(0, tk.END)
-            songs_list.selection_set(index - 1)
-
-def next_song():
-    selected_index = songs_list.curselection()
-    if selected_index:
-        index = selected_index[0]
-        if index < len(song_names) - 1:
-            songs_list.selection_clear(0, tk.END)
-            songs_list.selection_set(index + 1)
-    else:
-        songs_list.selection_clear(0, tk.END)
-        songs_list.selection_set(0)
-
 # TODO: repopulate this
 def space_key(*args):
-    pass
+    toggle_play()
+
 
 def back_key(*args):
-    pass
+    move_selection_up()
+
 
 def enter_key(*args):
-    pass
+    move_selection_down()
+
 
 # creating the root window
 root = tk.Tk()
@@ -108,7 +127,7 @@ mixer.init()
 
 # create the listbox to contain songs
 songs_list = tk.Listbox(root, selectmode=tk.SINGLE, bg="black", fg="white", font=('arial', 15), height=12, width=47,
-                     selectbackground="gray", selectforeground="black")
+                        selectbackground="gray", selectforeground="black")
 songs_list.grid(columnspan=9)
 
 # font is defined which is to be used for the button font
@@ -135,12 +154,12 @@ Resume_button['font'] = defined_font
 Resume_button.grid(row=1, column=2)
 
 # previous_song button
-previous_button = tk.Button(root, text="prev", width=7, command=previous_song)
+previous_button = tk.Button(root, text="prev", width=7, command=move_selection_up)
 previous_button['font'] = defined_font
 previous_button.grid(row=1, column=4)
 
 # next_song button
-next_button = tk.Button(root, text="next", width=7, command=next_song)
+next_button = tk.Button(root, text="next", width=7, command=move_selection_down)
 next_button['font'] = defined_font
 next_button.grid(row=1, column=5)
 
@@ -156,5 +175,7 @@ add_song_menu.add_command(label="Delete song", command=delete_song)
 root.bind("<space>", space_key)
 root.bind("<Return>", enter_key)
 root.bind("<BackSpace>", back_key)
+root.bind("<Up>", move_selection_up("key"))
+root.bind("<Down>", move_selection_down("key"))
 
 tk.mainloop()
