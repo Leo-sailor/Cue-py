@@ -4,6 +4,66 @@ import tkinter as tk
 import tkinter.font as font
 from tkinter import filedialog
 import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+import wave
+
+# Global variables
+musicPlayer = None
+visualization_fig = None
+visualization_canvas = None
+slider = None
+
+# Function to create the musicPlayer window
+def create_musicPlayer_window():
+    global musicPlayer
+    musicPlayer = tk.Toplevel()
+    musicPlayer.title('Song Controller')
+    musicPlayer.protocol("WM_DELETE_WINDOW", on_musicPlayer_close)
+
+# Function to handle musicPlayer window closure
+def on_musicPlayer_close():
+    global musicPlayer
+    musicPlayer.destroy()
+    musicPlayer = None
+
+# Function to visualize audio using matplotlib
+def visualize_audio(file_path):
+    global visualization_fig, visualization_canvas
+    audio = wave.open(file_path, 'rb')
+    framerate = audio.getframerate()
+    samples = audio.readframes(-1)
+    samples = np.frombuffer(samples, dtype=np.int16)
+    time = np.linspace(0, len(samples) / framerate, num=len(samples))
+
+    visualization_fig, ax = plt.subplots(figsize=(8, 2))
+    ax.plot(time, samples)
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Amplitude')
+    visualization_canvas = FigureCanvasTkAgg(visualization_fig, master=musicPlayer)
+    visualization_canvas_widget = visualization_canvas.get_tk_widget()
+    visualization_canvas_widget.pack()
+
+    slider_label = tk.Label(musicPlayer, text="Playback Position:")
+    slider_label.pack()
+    global slider
+    slider = tk.Scale(musicPlayer, from_=0, to=1, orient="horizontal")
+    slider.set(0)
+    slider.pack()
+
+
+# Function to update the slider position
+def update_slider_position():
+    if visualization_fig:
+        current_position = mixer.music.get_pos() / 1000  # Current position in seconds
+        slider.set(current_position)
+    root.after(100, update_slider_position)
+
+# Function to set audio position based on slider
+def set_position(event):
+    position = slider.get()
+    mixer.music.set_pos(position)
 
 # TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
 song_names = []
@@ -69,6 +129,7 @@ def delete_song():
 
 
 def play():
+    global musicPlayer
     selected_index = songs_list.curselection()
     if selected_index:
         index = selected_index[0]
@@ -78,12 +139,20 @@ def play():
     mixer.music.load(song_path)
     mixer.music.play()
     songs_list.activate(index)
+    if not musicPlayer:
+        create_musicPlayer_window()
+    elif musicPlayer:
+        # refresh_musicPlayer_window(song_path)
+        pass
 
 
 # to stop the  song
 def stop():
+    global musicPlayer
     mixer.music.stop()
     songs_list.selection_clear(tk.ACTIVE)
+    if musicPlayer:
+        on_musicPlayer_close()
 
 
 # to toggle the song for pause and resume
