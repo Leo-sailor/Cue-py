@@ -1,6 +1,6 @@
 # importing libraries
 from pygame import mixer
-from tkinter import *
+import tkinter as tk
 import tkinter.font as font
 from tkinter import filedialog
 import os
@@ -15,14 +15,14 @@ def add_folder():
             song_name = os.path.splitext(os.path.basename(song_file))[0]
             song_names.append(song_name)  # Add the song name to the list
             song_paths.append(os.path.join(folder_path, song_file))  # Add the full file path to the list
-            songs_list.insert(END, song_name)  # Display the song name in the listbox
+            songs_list.insert(tk.END, song_name)  # Display the song name in the listbox
 
 
 # add a song to the playlist
 def add_songs():
     song_paths.extend(filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),)))
     song_names.extend([os.path.splitext(os.path.basename(song))[0] for song in song_paths])
-    songs_list.insert(END, *song_names[-len(song_paths):])
+    songs_list.insert(tk.END, *song_names[-len(song_paths):])
 
 def delete_song():
     curr_song = songs_list.curselection()
@@ -40,7 +40,7 @@ def play():
 # to stop the  song
 def stop():
     mixer.music.stop()
-    songs_list.selection_clear(ACTIVE)
+    songs_list.selection_clear(tk.ACTIVE)
 
 
 # to toggle the song for pause and resume
@@ -69,7 +69,7 @@ def previous_song():
     if selected_index:
         index = selected_index[0]
         if index > 0:
-            songs_list.selection_clear(0, END)
+            songs_list.selection_clear(0, tk.END)
             songs_list.selection_set(index - 1)
 
 def next_song():
@@ -77,17 +77,17 @@ def next_song():
     if selected_index:
         index = selected_index[0]
         if index < len(song_names) - 1:
-            songs_list.selection_clear(0, END)
+            songs_list.selection_clear(0, tk.END)
             songs_list.selection_set(index + 1)
 
 # creating the root window
-root = Tk()
+root = tk.Tk()
 root.title('DataFlair Music player App ')
 # initialize mixer
 mixer.init()
 
 # create the listbox to contain songs
-songs_list = Listbox(root, selectmode=SINGLE, bg="black", fg="white", font=('arial', 15), height=12, width=47,
+songs_list = tk.Listbox(root, selectmode=tk.SINGLE, bg="black", fg="white", font=('arial', 15), height=12, width=47,
                      selectbackground="gray", selectforeground="black")
 songs_list.grid(columnspan=9)
 
@@ -95,39 +95,39 @@ songs_list.grid(columnspan=9)
 defined_font = font.Font(family='Helvetica')
 
 # play button
-play_button = Button(root, text="play", width=7, command=play)
+play_button = tk.Button(root, text="play", width=7, command=play)
 play_button['font'] = defined_font
 play_button.grid(row=1, column=0)
 
 # stop button
-stop_button = Button(root, text="stop", width=7, command=stop)
+stop_button = tk.Button(root, text="stop", width=7, command=stop)
 stop_button['font'] = defined_font
 stop_button.grid(row=1, column=1)
 
 # pause button
-pause_button = Button(root, text="pause", width=7, command=pause)
+pause_button = tk.Button(root, text="pause", width=7, command=pause)
 pause_button['font'] = defined_font
 pause_button.grid(row=1, column=3)
 
 # resume button
-Resume_button = Button(root, text="resume", width=7, command=resume)
+Resume_button = tk.Button(root, text="resume", width=7, command=resume)
 Resume_button['font'] = defined_font
 Resume_button.grid(row=1, column=2)
 
 # previous_song button
-previous_button = Button(root, text="prev", width=7, command=previous_song)
+previous_button = tk.Button(root, text="prev", width=7, command=previous_song)
 previous_button['font'] = defined_font
 previous_button.grid(row=1, column=4)
 
 # next_song button
-next_button = Button(root, text="next", width=7, command=next_song)
+next_button = tk.Button(root, text="next", width=7, command=next_song)
 next_button['font'] = defined_font
 next_button.grid(row=1, column=5)
 
 # menu
-my_menu = Menu(root)
+my_menu = tk.Menu(root)
 root.config(menu=my_menu)
-add_song_menu = Menu(my_menu)
+add_song_menu = tk.Menu(my_menu)
 my_menu.add_cascade(label="Menu", menu=add_song_menu)
 add_song_menu.add_command(label="Add folder", command=add_folder)
 add_song_menu.add_command(label="Add songs", command=add_songs)
@@ -137,4 +137,4 @@ root.bind("<space>", lambda event: toggle_play())
 root.bind("<Return>", lambda event: next_song())
 root.bind("<BackSpace>", lambda event: previous_song())
 
-mainloop()
+tk.mainloop()
