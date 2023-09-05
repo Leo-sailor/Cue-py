@@ -10,6 +10,8 @@ song_paths = []
 
 def add_folder():
     folder_path = filedialog.askdirectory(initialdir="Music/", title="Choose a folder")
+    if folder_path == '':
+        return None
     for song_file in os.listdir(folder_path):
         if song_file.endswith(".mp3"):
             song_name = os.path.splitext(os.path.basename(song_file))[0]
@@ -79,6 +81,19 @@ def next_song():
         if index < len(song_names) - 1:
             songs_list.selection_clear(0, tk.END)
             songs_list.selection_set(index + 1)
+    else:
+        songs_list.selection_clear(0, tk.END)
+        songs_list.selection_set(0)
+
+# TODO: repopulate this
+def space_key(*args):
+    pass
+
+def back_key(*args):
+    pass
+
+def enter_key(*args):
+    pass
 
 # creating the root window
 root = tk.Tk()
@@ -133,8 +148,8 @@ add_song_menu.add_command(label="Add folder", command=add_folder)
 add_song_menu.add_command(label="Add songs", command=add_songs)
 add_song_menu.add_command(label="Delete song", command=delete_song)
 
-root.bind("<space>", lambda event: toggle_play())
-root.bind("<Return>", lambda event: next_song())
-root.bind("<BackSpace>", lambda event: previous_song())
+root.bind("<space>", space_key)
+root.bind("<Return>", enter_key)
+root.bind("<BackSpace>", back_key)
 
 tk.mainloop()
