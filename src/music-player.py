@@ -4,7 +4,7 @@ import tkinter as tk
 import tkinter.font as font
 from tkinter import filedialog
 import os
-
+# TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
 song_names = []
 song_paths = []
 
@@ -22,8 +22,8 @@ def add_folder():
 
 # add a song to the playlist
 def add_songs():
-    song_paths.extend(filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),)))
-    song_names.extend([os.path.splitext(os.path.basename(song))[0] for song in song_paths])
+    song_paths.append(filedialog.askopenfilenames(initialdir="Music/", title="Choose a song", filetypes=(("mp3 Files", "*.mp3"),)))
+    song_names.append([os.path.splitext(os.path.basename(song))[0] for song in song_paths])
     songs_list.insert(tk.END, *song_names[-len(song_paths):])
 
 def delete_song():
@@ -34,10 +34,12 @@ def play():
     selected_index = songs_list.curselection()
     if selected_index:
         index = selected_index[0]
-        song_path = song_paths[index]
-        mixer.music.load(song_path)
-        mixer.music.play()
-        songs_list.activate(index)
+    else:
+        index = 0
+    song_path = song_paths[index]
+    mixer.music.load(song_path)
+    mixer.music.play()
+    songs_list.activate(index)
 
 # to stop the  song
 def stop():
