@@ -5,15 +5,18 @@ import tkinter.font as font
 from tkinter import filedialog
 import os
 
-
-#add many songs to the playlist
-def addsongs():
-    #a list of songs is returned 
-    temp_song=filedialog.askopenfilenames(initialdir="Music/",title="Choose a song", filetypes=(("mp3 Files","*.mp3"), ("folder","")))
-    #loop through everyitem in the list
-    for s in temp_song:
-        s = os.path.splitext(os.path.basename(s))[0]
+def addfolder():
+    songs=filedialog.askdirectory(initialdir="Music/",title="Choose a folder")
+    for song in os.listdir(songs):
+        s = os.path.splitext(os.path.basename(song))[0]
         songs_list.insert(END,s)
+
+#add a song to the playlist
+def addsongs():
+    #a song is returned
+    s=filedialog.askopenfilenames(initialdir="Music/",title="Choose a song", filetypes=(("mp3 Files","*.mp3"),))
+    s = os.path.splitext(os.path.basename(s))[0]
+    songs_list.insert(END,s)
             
 def deletesong():
     curr_song=songs_list.curselection()
@@ -120,6 +123,7 @@ my_menu=Menu(root)
 root.config(menu=my_menu)
 add_song_menu=Menu(my_menu)
 my_menu.add_cascade(label="Menu",menu=add_song_menu)
+add_song_menu.add_command(label="Add folder", command=addfolder)
 add_song_menu.add_command(label="Add songs",command=addsongs)
 add_song_menu.add_command(label="Delete song",command=deletesong)
 
