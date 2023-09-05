@@ -9,13 +9,11 @@ import os
 #add many songs to the playlist
 def addsongs():
     #a list of songs is returned 
-    temp_song=filedialog.askopenfilenames(initialdir="Music/",title="Choose a song", filetypes=(("mp3 Files","*.mp3"),))
+    temp_song=filedialog.askopenfilenames(initialdir="Music/",title="Choose a song", filetypes=(("mp3 Files","*.mp3"), ("folder","")))
     #loop through everyitem in the list
     for s in temp_song:
-        #s=s.replace("C:/Users/lenovo/Desktop/DataFlair/Notepad/Music/","")
         s = os.path.splitext(os.path.basename(s))[0]
         songs_list.insert(END,s)
-        
             
 def deletesong():
     curr_song=songs_list.curselection()
