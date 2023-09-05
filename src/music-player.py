@@ -69,7 +69,7 @@ def Next():
     songs_list.selection_clear(0,END)
     #activate newsong
     songs_list.activate(next_one)
-     #set the next song
+    #set the next song
     songs_list.selection_set(next_one)
 
 #creating the root window 
