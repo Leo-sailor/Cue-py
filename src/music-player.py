@@ -3,6 +3,7 @@ from pygame import mixer
 from tkinter import *
 import tkinter.font as font
 from tkinter import filedialog
+import os
 
 
 #add many songs to the playlist
@@ -11,7 +12,8 @@ def addsongs():
     temp_song=filedialog.askopenfilenames(initialdir="Music/",title="Choose a song", filetypes=(("mp3 Files","*.mp3"),))
     #loop through everyitem in the list
     for s in temp_song:
-        s=s.replace("C:/Users/lenovo/Desktop/DataFlair/Notepad/Music/","")
+        #s=s.replace("C:/Users/lenovo/Desktop/DataFlair/Notepad/Music/","")
+        s = os.path.splitext(os.path.basename(s))[0]
         songs_list.insert(END,s)
         
             
