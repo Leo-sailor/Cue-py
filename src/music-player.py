@@ -204,7 +204,7 @@ def stop():
     mixer.music.stop()
     songs_list.selection_clear(tk.ACTIVE)
     if music_player.musicPlayer is not None:
-        music_player.musicPlayer.destroy()
+        music_player.on_musicPlayer_close()
 
 
 # to toggle the song for pause and resume
