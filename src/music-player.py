@@ -12,6 +12,7 @@ from pydub import AudioSegment
 
 class MusicPlayer:
     def __init__(self):
+        self.finished = False
         self.slider_update_id = None
         self.playback_position = 0
         self.counter = 0
@@ -30,7 +31,7 @@ class MusicPlayer:
 
     def on_musicPlayer_close(self):
         self.musicPlayer.destroy()
-        self.musicPlayer = None
+        self.__init__()
 
     def visualize_audio(self, file_path):
         try:
@@ -93,7 +94,8 @@ class MusicPlayer:
         if not self.slider_update_pending:
             self.counter += 1
             current_position = self.playback_position + self.counter
-            print(current_position)
+            if current_position == round(self.audio.duration_seconds):
+                self.back_track_music()
             self.slider.set(current_position)
             self.slider_update_id = root.after(1000, self.update_slider_position)
 
@@ -102,14 +104,18 @@ class MusicPlayer:
         # Ensure there's an active audio playback
         if self.audio is not None:
             # Calculate the desired position in seconds based on the slider value
-            desired_position = float(position)
+            self.playback_position = float(position)
 
-            # Set the current position to the desired position
-            self.playback_position = desired_position
+            if self.playback_position == round(self.audio.duration_seconds):
+                self.back_track_music()
+                return
 
             # set mixer to the desired position
-            mixer.music.set_pos(desired_position)
-            print(desired_position)
+            mixer.music.set_pos(self.playback_position)
+
+    def back_track_music(self):
+        mixer.music.rewind()
+        root.after_cancel(self.slider_update_id)
 
 
 # TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
@@ -198,7 +204,7 @@ def stop():
     mixer.music.stop()
     songs_list.selection_clear(tk.ACTIVE)
     if music_player.musicPlayer is not None:
-        music_player.on_musicPlayer_close()
+        music_player.musicPlayer.destroy()
 
 
 # to toggle the song for pause and resume
