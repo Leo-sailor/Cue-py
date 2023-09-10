@@ -139,6 +139,15 @@ def move_selection_up(*event):
 
 
 def move_selection_down(*event):
+    """
+    Move the selection of the songs_list widget down by one index.
+
+    Args:
+        *event: Variable length argument list of events.
+
+    Returns:
+        None
+    """
     current_index = songs_list.curselection()
     if event == 'key':
         songs_list.selection_set(current_index)
