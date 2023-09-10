@@ -9,7 +9,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
 
-#test
 class MusicPlayer:
     def __init__(self):
         self.finished = False
