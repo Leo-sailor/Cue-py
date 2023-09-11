@@ -11,6 +11,8 @@ from pydub import AudioSegment
 
 class MusicPlayer:
     def __init__(self):
+        self.canvas_width = 0
+        self.just_paused = False
         self.finished = False
         self.slider_update_id = None
         self.playback_position = 0
@@ -65,10 +67,11 @@ class MusicPlayer:
 
         # Create a slider to control the playback position
         slider_label = tk.Label(self.musicPlayer, text="Playback Position:")
+
         slider_label.pack()
 
         self.slider = tk.Scale(self.musicPlayer, from_=0, to=self.audio.duration_seconds, orient="horizontal",
-                               resolution=1)
+                               resolution=1, length=duration_seconds)
         self.slider.set(0)
         self.slider.pack()
 
@@ -109,11 +112,16 @@ class MusicPlayer:
                 self.back_track_music()
                 return
 
+            if self.just_paused:
+                mixer.music.unpause()
+                self.just_paused = False
             # set mixer to the desired position
             mixer.music.set_pos(self.playback_position)
 
     def back_track_music(self):
+        self.just_paused = True
         mixer.music.rewind()
+        mixer.music.pause()
         root.after_cancel(self.slider_update_id)
 
 
