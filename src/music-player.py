@@ -146,15 +146,6 @@ def move_selection_up(*event):
 
 
 def move_selection_down(*event):
-    """
-    Move the selection of the songs_list widget down by one index.
-
-    Args:
-        *event: Variable length argument list of events.
-
-    Returns:
-        None
-    """
     current_index = songs_list.curselection()
     if event == 'key':
         songs_list.selection_set(current_index)
@@ -210,8 +201,8 @@ def play():
     if music_player.musicPlayer is None:
         music_player.create_musicPlayer_window(song_path)
     elif music_player.musicPlayer is not None:
-        # refresh_musicPlayer_window(song_path)
-        pass
+        music_player.on_musicPlayer_close()
+        music_player.create_musicPlayer_window(song_path)
 
 
 # to stop the  song
@@ -244,6 +235,7 @@ def resume():
     music_player.slider_update_pending = False
     root.after_cancel(music_player.slider_update_id)
     music_player.update_slider_position()
+
 
 def space_key(*args):
     toggle_play()
