@@ -9,11 +9,10 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
 
+
 class MusicPlayer:
     def __init__(self):
-        self.canvas_width = 0
         self.just_paused = False
-        self.finished = False
         self.slider_update_id = None
         self.playback_position = 0
         self.counter = 0
@@ -71,9 +70,10 @@ class MusicPlayer:
         slider_label.pack()
 
         self.slider = tk.Scale(self.musicPlayer, from_=0, to=self.audio.duration_seconds, orient="horizontal",
-                               resolution=1, length=duration_seconds)
+                               resolution=1, length=650)
         self.slider.set(0)
-        self.slider.pack()
+        self.slider.pack(side='bottom')
+        self.musicPlayer.update_idletasks()
 
         self.slider.bind("<Button-1>", lambda event: setattr(self, 'slider_update_pending', True))
 
@@ -125,7 +125,6 @@ class MusicPlayer:
         root.after_cancel(self.slider_update_id)
 
 
-# TODO: turn the funge to get the first one to play into a proper selction, ie enter key doesnt work after that
 song_names = []
 song_paths = []
 music_player = MusicPlayer()
@@ -243,7 +242,6 @@ def resume():
     mixer.music.unpause()
 
 
-# TODO: repopulate this
 def space_key(*args):
     toggle_play()
 
