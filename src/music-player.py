@@ -235,12 +235,15 @@ def toggle_play():
 # to pause the song
 def pause():
     mixer.music.pause()
+    music_player.slider_update_pending = True
 
 
 # to resume the song
 def resume():
     mixer.music.unpause()
-
+    music_player.slider_update_pending = False
+    root.after_cancel(music_player.slider_update_id)
+    music_player.update_slider_position()
 
 def space_key(*args):
     toggle_play()
