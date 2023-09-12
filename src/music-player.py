@@ -9,6 +9,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
 import tempfile
+import io
+from PIL import Image, ImageTk
+import time
 
 
 class MusicPlayer:
@@ -34,10 +37,34 @@ class MusicPlayer:
         self.musicPlayer.destroy()
         self.__init__()
 
+    def load_saved_plot(self, file_path):
+        # Open the saved PNG file in binary read mode
+        print(f'loading saved image: {file_path}')
+        with open(file_path, 'rb') as saved_file:
+            # Read the file content into a buffer
+            buffer = io.BytesIO(saved_file.read())
+
+        # Use PIL to open the image from the buffer
+        saved_image = Image.open(buffer)
+
+        # Convert the PIL image to a Tkinter PhotoImage
+        saved_photo = ImageTk.PhotoImage(saved_image)
+        # Create a Label widget to display the image
+        if self.visualization_canvas is not None:
+            self.visualization_canvas.get_tk_widget().destroy()
+        self.visualization_canvas = tk.Label(self.musicPlayer, image=saved_photo)
+        self.visualization_canvas.image = saved_photo
+        self.visualization_canvas.pack()
+
     def visualize_audio(self, file_path):
-        # Load the saved audio data
+        t0 = time.time()
+        self.audio = song_dict[file_path][1]
+        t1 = time.time()
+        print('Load_saved_plot time:', t1 - t0)
+        def update_visualization():
+            self.load_saved_plot(song_dict[file_path][0])
 
-
+        update_visualization()
 
         # Create a slider to control the playback position
         slider_label = tk.Label(self.musicPlayer, text="Playback Position:")
@@ -48,7 +75,9 @@ class MusicPlayer:
                                resolution=1, length=650)
         self.slider.set(0)
         self.slider.pack(side='bottom')
+
         self.musicPlayer.update_idletasks()
+
 
         self.slider.bind("<Button-1>", lambda event: setattr(self, 'slider_update_pending', True))
 
@@ -57,6 +86,7 @@ class MusicPlayer:
 
         # Start periodic slider updates
         self.update_slider_position()
+
 
     def slider_released(self, event):
         # This function is called when the slider is released by the user
@@ -77,7 +107,6 @@ class MusicPlayer:
             self.slider_update_id = root.after(1000, self.update_slider_position)
 
     def update_audio_position(self, position):
-        print(position)
         # Ensure there's an active audio playback
         if self.audio is not None:
             # Calculate the desired position in seconds based on the slider value
@@ -102,12 +131,12 @@ class MusicPlayer:
 
 song_names = []
 song_paths = []
+song_dict = {}
 music_player = MusicPlayer()
 
 
 def plotData(file_path):
     try:
-        print(file_path)
         audio = AudioSegment.from_mp3(file_path)
     except Exception as e:
         print(f"Error loading audio file: {e}")
@@ -117,30 +146,38 @@ def plotData(file_path):
     duration_seconds = audio.duration_seconds
 
     def update_visualization():
-        ax = plt.subplots(figsize=(8, 2))[1]
+        fig, ax = plt.subplots(figsize=(8, 2))
         ax.plot(np.linspace(0, duration_seconds, num=len(samples)), samples)
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Amplitude')
         ax.set_xlim(0, duration_seconds)  # Set x-axis limits to the duration of the song
         ax.set_ylim(np.min(samples), np.max(samples))  # Set y-axis limits to min and max amplitudes
-        return ax
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')  # You can choose a different format if needed
+
+        # Seek to the beginning of the buffer
+        buffer.seek(0)
+        return buffer
 
     # Call the update_visualization function when needed (e.g., when the window is created)
     return update_visualization()
 
-def save_data_to_tempfile(song_path, data):
+
+def save_data_to_tempfile(song_path, buffer):
     # Create a temporary directory if it doesn't exist
     temp_dir = tempfile.mkdtemp()
 
     # Create a unique file name based on the song_path
+    audio = AudioSegment.from_mp3(song_path)
     _, file_extension = os.path.splitext(song_path)
-    temp_file_name = os.path.join(temp_dir, f"tempfile_{os.path.basename(song_path)}{file_extension}")
+    song_path = song_path.replace(".mp3", "")
+    temp_file_name = os.path.join(temp_dir, f"tempfile_{os.path.basename(song_path)}.png")
 
     # Save data to the temporary file
     with open(temp_file_name, 'wb') as temp_file:
-        temp_file.write(data)
-
-    return temp_file_name
+        temp_file.write(buffer.getvalue())
+    buffer.close()
+    return temp_file_name, audio
 
 
 def move_selection_up(*event):
@@ -178,11 +215,16 @@ def add_folder():
     if folder_path == '':
         return None
     for song_file in os.listdir(folder_path):
+        print(f'song_file {song_file}')
         if song_file.endswith(".mp3"):
             song_name = os.path.splitext(os.path.basename(song_file))[0]
             song_names.append(song_name)  # Add the song name to the list
-            song_paths.append(os.path.join(folder_path, song_file))  # Add the full file path to the list
+            song_path = os.path.join(folder_path, song_file)
+            song_paths.append(song_path)  # Add the full file path to the list
             songs_list.insert(tk.END, song_name)  # Display the song name in the listbox
+            buffer = plotData(song_path)
+            location, saved_audio = save_data_to_tempfile(song_path, buffer)
+            song_dict[song_path] = [location, saved_audio]
 
 
 # add a song to the playlist
@@ -192,11 +234,11 @@ def add_songs():
     if file_path == '':
         return None
     song_paths.append(file_path)
-    print(file_path)
     song_names.append(os.path.splitext(os.path.basename(file_path))[0])
     songs_list.insert(tk.END, song_names[-1])
-    data = plotData(file_path)
-    print(data)
+    buffer = plotData(file_path)
+    location, saved_audio = save_data_to_tempfile(file_path, buffer)
+    song_dict[file_path] = [location, saved_audio]
 
 
 def delete_song():
@@ -215,7 +257,10 @@ def play():
     mixer.music.play()
     songs_list.activate(index)
     if music_player.musicPlayer is None:
+        t0 = time.time()
         music_player.create_musicPlayer_window(song_path)
+        t1 = time.time()
+        print("Time elapsed: ", t1 - t0)
     elif music_player.musicPlayer is not None:
         music_player.on_musicPlayer_close()
         music_player.create_musicPlayer_window(song_path)
