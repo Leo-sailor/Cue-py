@@ -5,13 +5,11 @@ import tkinter.font as font
 from tkinter import filedialog
 import os
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
 import tempfile
 import io
 from PIL import Image, ImageTk
-import time
 
 
 class MusicPlayer:
@@ -57,10 +55,7 @@ class MusicPlayer:
         self.visualization_canvas.pack()
 
     def visualize_audio(self, file_path):
-        t0 = time.time()
         self.audio = song_dict[file_path][1]
-        t1 = time.time()
-        print('Load_saved_plot time:', t1 - t0)
         def update_visualization():
             self.load_saved_plot(song_dict[file_path][0])
 
@@ -86,7 +81,6 @@ class MusicPlayer:
 
         # Start periodic slider updates
         self.update_slider_position()
-
 
     def slider_released(self, event):
         # This function is called when the slider is released by the user
