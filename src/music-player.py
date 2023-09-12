@@ -10,6 +10,7 @@ from pydub import AudioSegment
 import tempfile
 import io
 from PIL import Image, ImageTk
+import time
 
 
 class MusicPlayer:
