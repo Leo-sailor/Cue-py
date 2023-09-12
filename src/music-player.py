@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 from pydub import AudioSegment
+import tempfile
 
 
 class MusicPlayer:
@@ -34,35 +35,9 @@ class MusicPlayer:
         self.__init__()
 
     def visualize_audio(self, file_path):
-        try:
-            print(file_path)
-            self.audio = AudioSegment.from_mp3(file_path)
-        except Exception as e:
-            print(f"Error loading audio file: {e}")
-            return
+        # Load the saved audio data
 
-        samples = np.array(self.audio.get_array_of_samples())
-        duration_seconds = self.audio.duration_seconds
 
-        # Create a placeholder for the visualization
-        self.visualization_canvas = None
-
-        def update_visualization():
-            nonlocal self
-            if self.visualization_canvas is None:
-                self.visualization_fig, ax = plt.subplots(figsize=(8, 2))
-                ax.plot(np.linspace(0, duration_seconds, num=len(samples)), samples)
-                ax.set_xlabel('Time (s)')
-                ax.set_ylabel('Amplitude')
-                ax.set_xlim(0, duration_seconds)  # Set x-axis limits to the duration of the song
-                ax.set_ylim(np.min(samples), np.max(samples))  # Set y-axis limits to min and max amplitudes
-                self.visualization_canvas = FigureCanvasTkAgg(self.visualization_fig, master=self.musicPlayer)
-                visualization_canvas_widget = self.visualization_canvas.get_tk_widget()
-                visualization_canvas_widget.pack()
-                self.musicPlayer.update_idletasks()  # Force GUI update
-
-        # Call the update_visualization function when needed (e.g., when the window is created)
-        update_visualization()
 
         # Create a slider to control the playback position
         slider_label = tk.Label(self.musicPlayer, text="Playback Position:")
@@ -130,6 +105,44 @@ song_paths = []
 music_player = MusicPlayer()
 
 
+def plotData(file_path):
+    try:
+        print(file_path)
+        audio = AudioSegment.from_mp3(file_path)
+    except Exception as e:
+        print(f"Error loading audio file: {e}")
+        return
+
+    samples = np.array(audio.get_array_of_samples())
+    duration_seconds = audio.duration_seconds
+
+    def update_visualization():
+        ax = plt.subplots(figsize=(8, 2))[1]
+        ax.plot(np.linspace(0, duration_seconds, num=len(samples)), samples)
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Amplitude')
+        ax.set_xlim(0, duration_seconds)  # Set x-axis limits to the duration of the song
+        ax.set_ylim(np.min(samples), np.max(samples))  # Set y-axis limits to min and max amplitudes
+        return ax
+
+    # Call the update_visualization function when needed (e.g., when the window is created)
+    return update_visualization()
+
+def save_data_to_tempfile(song_path, data):
+    # Create a temporary directory if it doesn't exist
+    temp_dir = tempfile.mkdtemp()
+
+    # Create a unique file name based on the song_path
+    _, file_extension = os.path.splitext(song_path)
+    temp_file_name = os.path.join(temp_dir, f"tempfile_{os.path.basename(song_path)}{file_extension}")
+
+    # Save data to the temporary file
+    with open(temp_file_name, 'wb') as temp_file:
+        temp_file.write(data)
+
+    return temp_file_name
+
+
 def move_selection_up(*event):
     current_index = songs_list.curselection()
     if event == 'key':
@@ -179,8 +192,11 @@ def add_songs():
     if file_path == '':
         return None
     song_paths.append(file_path)
+    print(file_path)
     song_names.append(os.path.splitext(os.path.basename(file_path))[0])
     songs_list.insert(tk.END, song_names[-1])
+    data = plotData(file_path)
+    print(data)
 
 
 def delete_song():
