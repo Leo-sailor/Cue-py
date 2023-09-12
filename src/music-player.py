@@ -1,6 +1,9 @@
 # importing libraries
+import tkinter
+
 from pygame import mixer
 import tkinter as tk
+from tkinter import ttk
 import tkinter.font as font
 from tkinter import filedialog
 import os
@@ -11,6 +14,7 @@ import tempfile
 import io
 from PIL import Image, ImageTk
 import time
+import threading
 
 
 class MusicPlayer:
@@ -57,6 +61,7 @@ class MusicPlayer:
 
     def visualize_audio(self, file_path):
         self.audio = song_dict[file_path][1]
+
         def update_visualization():
             self.load_saved_plot(song_dict[file_path][0])
 
@@ -73,7 +78,6 @@ class MusicPlayer:
         self.slider.pack(side='bottom')
 
         self.musicPlayer.update_idletasks()
-
 
         self.slider.bind("<Button-1>", lambda event: setattr(self, 'slider_update_pending', True))
 
@@ -123,11 +127,65 @@ class MusicPlayer:
         mixer.music.pause()
         root.after_cancel(self.slider_update_id)
 
+#TODO: Fix the loading bar
+class LoadingBar:
+    def __init__(self):
+        self.text_var = '0'
+        self.position = 0
+        self.bar = None
+        self.canvas = None
+        self.text = None
+
+        self.progressBar = tk.Toplevel()
+        self.progressBar.title("Loading Bar")
+
+        self.bar = ttk.Progressbar(self.progressBar, mode="indeterminate")
+        self.bar.pack()
+
+    def create_loadingBar(self):
+        print('running create_loadingBar')
+        self.progressBar.mainloop()
+
+    """def create_loadingBar(self):
+        print('running create_loadingBar')
+        self.progressBar = tk.Toplevel()
+        self.progressBar.title('Song Controller')
+        self.progressBar.protocol("WM_DELETE_WINDOW", self.on_loadingBar_close)
+        self.progressBar.geometry('250x50')
+
+        self.bar = ttk.Progressbar(self.progressBar, orient='horizontal', length=200, mode='determinate', maximum=100)
+        self.bar.place(relx=0.5, rely=0.5, anchor='n')
+
+        self.text_var = tk.StringVar()
+        self.text_var.set("Progression: 0%")
+        self.text = tk.Label(self.progressBar, textvariable=self.text_var)
+        self.text.pack()
+
+        self.progressBar.after(1000, self.update_progress)
+        self.progressBar.update_idletasks()"""
+
+    def update_progress(self, value):
+        self.bar["value"] = value
+        percentage = int((value / self.bar["maximum"]) * 100)
+        self.text_var.set(f"Progression: {percentage}%")
+        self.text.configure(textvariable=self.text_var)
+
+    def on_loadingBar_close(self):
+        self.progressBar.destroy()
+        self.__init__()
+
 
 song_names = []
 song_paths = []
 song_dict = {}
 music_player = MusicPlayer()
+
+
+def open_loading_bar():
+    loading_bar = LoadingBar()
+    loading_bar_thread = threading.Thread(target=loading_bar.create_loadingBar)
+    loading_bar_thread.start()
+    print('Loading bar created')
 
 
 def plotData(file_path):
@@ -205,10 +263,28 @@ def move_selection_down(*event):
         songs_list.selection_set(0)
 
 
+def toggle_loading(started):
+    if started:
+        songs_list.delete(0, tk.END)
+        songs_list.insert(tk.END, "Loading...")
+        mixer.music.pause()
+        songs_list.master.update()
+        loading_bar_thread = threading.Thread(target=open_loading_bar)
+        loading_bar_thread.start()
+        print(loading_bar_thread)
+        time.sleep(1)
+    else:
+        songs_list.delete(0, tk.END)
+        for name in song_names:
+            songs_list.insert(tk.END, name)
+        mixer.music.unpause()
+
+
 def add_folder():
     folder_path = filedialog.askdirectory(initialdir="Music/", title="Choose a folder")
     if folder_path == '':
         return None
+    toggle_loading(True)
     for song_file in os.listdir(folder_path):
         print(f'song_file {song_file}')
         if song_file.endswith(".mp3"):
@@ -220,6 +296,7 @@ def add_folder():
             buffer = plotData(song_path)
             location, saved_audio = save_data_to_tempfile(song_path, buffer)
             song_dict[song_path] = [location, saved_audio]
+    toggle_loading(False)
 
 
 # add a song to the playlist
@@ -228,12 +305,14 @@ def add_songs():
                                            filetypes=(("mp3 Files", "*.mp3"),))
     if file_path == '':
         return None
+    toggle_loading(True)
     song_paths.append(file_path)
     song_names.append(os.path.splitext(os.path.basename(file_path))[0])
     songs_list.insert(tk.END, song_names[-1])
     buffer = plotData(file_path)
     location, saved_audio = save_data_to_tempfile(file_path, buffer)
     song_dict[file_path] = [location, saved_audio]
+    toggle_loading(False)
 
 
 def delete_song():
