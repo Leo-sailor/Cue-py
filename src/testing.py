@@ -1,4 +1,4 @@
-# importing libraries
+"""# importing libraries
 from pygame import mixer
 import tkinter as tk
 import tkinter.font as font
@@ -364,4 +364,4 @@ root.bind("<BackSpace>", back_key)
 root.bind("<Up>", move_selection_up("key"))
 root.bind("<Down>", move_selection_down("key"))
 
-tk.mainloop()
+tk.mainloop()"""

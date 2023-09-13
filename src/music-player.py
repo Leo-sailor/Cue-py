@@ -1,5 +1,4 @@
 # importing libraries
-from matplotlib import cm
 from pygame import mixer
 import tkinter as tk
 import tkinter.font as font
@@ -12,7 +11,8 @@ import tempfile
 import io
 from PIL import Image, ImageTk
 import time
-import matplotlib
+from matplotlib.colors import LinearSegmentedColormap
+
 
 class MusicPlayer:
     def __init__(self):
@@ -140,27 +140,40 @@ def plotData(file_path):
 
     samples = np.array(audio.get_array_of_samples())
     duration_seconds = audio.duration_seconds
+    num_segments = round(duration_seconds)
+
+    # Create a custom colormap with your list of colors
+    colors = ["red", "green"]  # Add more colors as needed
+    cmap = LinearSegmentedColormap.from_list("custom", colors, N=num_segments)
 
     def update_visualization():
         fig, ax = plt.subplots(figsize=(8, 2))
-        x_values = np.linspace(0, duration_seconds, num=len(samples))
-        line = ax.plot(x_values, samples)[0]  # Get the Line2D object
+        x_values = np.linspace(0, duration_seconds, num=round(len(samples) / 20))
+        segment_length = round(len(samples) / 20) // num_segments
+
+        for i in range(num_segments):
+            start_idx = i * segment_length
+            end_idx = (i + 1) * segment_length
+            segment_samples = samples[start_idx:end_idx]
+            segment_x = x_values[start_idx:end_idx]
+
+            color = cmap(i / (num_segments - 1))  # Interpolate color based on the segment index
+            ax.plot(segment_x, segment_samples, color=color)
 
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Amplitude')
         ax.set_xlim(0, duration_seconds)
         ax.set_ylim(np.min(samples), np.max(samples))
 
-        # Create a colormap based on the y-values (samples)
-        #TODO: WHY ISNT INFERNO GODDAM GOING ThRoUgH
-        colors = cm.inferno
-
-        # Update the line's color
-        line.set_color(colors)
+        # Add light vertical lines every 5 seconds
+        interval_seconds = 5
+        for i in range(0, int(duration_seconds) + 1, interval_seconds):
+            ax.vlines(i, np.min(samples), -30000, color='red', linestyle='--')
 
         buffer = io.BytesIO()
-        plt.savefig(buffer, format='png')
+        plt.savefig(buffer, format='png')  # You can choose a different format if needed
 
+        # Seek to the beginning of the buffer
         buffer.seek(0)
         return buffer
 
