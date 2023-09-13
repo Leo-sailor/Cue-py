@@ -1,9 +1,7 @@
 # importing libraries
-import tkinter
-
+from matplotlib import cm
 from pygame import mixer
 import tkinter as tk
-from tkinter import ttk
 import tkinter.font as font
 from tkinter import filedialog
 import os
@@ -14,8 +12,7 @@ import tempfile
 import io
 from PIL import Image, ImageTk
 import time
-import threading
-
+import matplotlib
 
 class MusicPlayer:
     def __init__(self):
@@ -127,65 +124,11 @@ class MusicPlayer:
         mixer.music.pause()
         root.after_cancel(self.slider_update_id)
 
-#TODO: Fix the loading bar
-class LoadingBar:
-    def __init__(self):
-        self.text_var = '0'
-        self.position = 0
-        self.bar = None
-        self.canvas = None
-        self.text = None
-
-        self.progressBar = tk.Toplevel()
-        self.progressBar.title("Loading Bar")
-
-        self.bar = ttk.Progressbar(self.progressBar, mode="indeterminate")
-        self.bar.pack()
-
-    def create_loadingBar(self):
-        print('running create_loadingBar')
-        self.progressBar.mainloop()
-
-    """def create_loadingBar(self):
-        print('running create_loadingBar')
-        self.progressBar = tk.Toplevel()
-        self.progressBar.title('Song Controller')
-        self.progressBar.protocol("WM_DELETE_WINDOW", self.on_loadingBar_close)
-        self.progressBar.geometry('250x50')
-
-        self.bar = ttk.Progressbar(self.progressBar, orient='horizontal', length=200, mode='determinate', maximum=100)
-        self.bar.place(relx=0.5, rely=0.5, anchor='n')
-
-        self.text_var = tk.StringVar()
-        self.text_var.set("Progression: 0%")
-        self.text = tk.Label(self.progressBar, textvariable=self.text_var)
-        self.text.pack()
-
-        self.progressBar.after(1000, self.update_progress)
-        self.progressBar.update_idletasks()"""
-
-    def update_progress(self, value):
-        self.bar["value"] = value
-        percentage = int((value / self.bar["maximum"]) * 100)
-        self.text_var.set(f"Progression: {percentage}%")
-        self.text.configure(textvariable=self.text_var)
-
-    def on_loadingBar_close(self):
-        self.progressBar.destroy()
-        self.__init__()
-
 
 song_names = []
 song_paths = []
 song_dict = {}
 music_player = MusicPlayer()
-
-
-def open_loading_bar():
-    loading_bar = LoadingBar()
-    loading_bar_thread = threading.Thread(target=loading_bar.create_loadingBar)
-    loading_bar_thread.start()
-    print('Loading bar created')
 
 
 def plotData(file_path):
@@ -200,19 +143,27 @@ def plotData(file_path):
 
     def update_visualization():
         fig, ax = plt.subplots(figsize=(8, 2))
-        ax.plot(np.linspace(0, duration_seconds, num=len(samples)), samples)
+        x_values = np.linspace(0, duration_seconds, num=len(samples))
+        line = ax.plot(x_values, samples)[0]  # Get the Line2D object
+
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Amplitude')
-        ax.set_xlim(0, duration_seconds)  # Set x-axis limits to the duration of the song
-        ax.set_ylim(np.min(samples), np.max(samples))  # Set y-axis limits to min and max amplitudes
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png')  # You can choose a different format if needed
+        ax.set_xlim(0, duration_seconds)
+        ax.set_ylim(np.min(samples), np.max(samples))
 
-        # Seek to the beginning of the buffer
+        # Create a colormap based on the y-values (samples)
+        #TODO: WHY ISNT INFERNO GODDAM GOING ThRoUgH
+        colors = cm.inferno
+
+        # Update the line's color
+        line.set_color(colors)
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+
         buffer.seek(0)
         return buffer
 
-    # Call the update_visualization function when needed (e.g., when the window is created)
     return update_visualization()
 
 
@@ -269,10 +220,6 @@ def toggle_loading(started):
         songs_list.insert(tk.END, "Loading...")
         mixer.music.pause()
         songs_list.master.update()
-        loading_bar_thread = threading.Thread(target=open_loading_bar)
-        loading_bar_thread.start()
-        print(loading_bar_thread)
-        time.sleep(1)
     else:
         songs_list.delete(0, tk.END)
         for name in song_names:
@@ -309,7 +256,9 @@ def add_songs():
     song_paths.append(file_path)
     song_names.append(os.path.splitext(os.path.basename(file_path))[0])
     songs_list.insert(tk.END, song_names[-1])
+    print('plotting')
     buffer = plotData(file_path)
+    print('saving')
     location, saved_audio = save_data_to_tempfile(file_path, buffer)
     song_dict[file_path] = [location, saved_audio]
     toggle_loading(False)
