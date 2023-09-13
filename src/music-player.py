@@ -32,6 +32,8 @@ class MusicPlayer:
         self.musicPlayer.title('Song Controller')
         self.musicPlayer.protocol("WM_DELETE_WINDOW", self.on_musicPlayer_close)
         self.visualize_audio(input_song)
+        self.musicPlayer.geometry("804x259")
+        self.musicPlayer.resizable(width=False, height=False)
 
     def on_musicPlayer_close(self):
         self.musicPlayer.destroy()
@@ -54,7 +56,7 @@ class MusicPlayer:
             self.visualization_canvas.get_tk_widget().destroy()
         self.visualization_canvas = tk.Label(self.musicPlayer, image=saved_photo)
         self.visualization_canvas.image = saved_photo
-        self.visualization_canvas.pack()
+        self.visualization_canvas.place(x=0, y=0)
 
     def visualize_audio(self, file_path):
         self.audio = song_dict[file_path][1]
@@ -65,14 +67,14 @@ class MusicPlayer:
         update_visualization()
 
         # Create a slider to control the playback position
-        slider_label = tk.Label(self.musicPlayer, text="Playback Position:")
+        slider_label = tk.Label(self.musicPlayer, text="Playback Position:", anchor="center")
 
-        slider_label.pack()
+        slider_label.place(y=202, x=350)
 
         self.slider = tk.Scale(self.musicPlayer, from_=0, to=self.audio.duration_seconds, orient="horizontal",
-                               resolution=1, length=650)
+                               resolution=1, length=655)
         self.slider.set(0)
-        self.slider.pack(side='bottom')
+        self.slider.place(x=85, y=220)
 
         self.musicPlayer.update_idletasks()
 
@@ -168,7 +170,8 @@ def plotData(file_path):
         # Add light vertical lines every 5 seconds
         interval_seconds = 5
         for i in range(0, int(duration_seconds) + 1, interval_seconds):
-            ax.vlines(i, np.min(samples), -30000, color='red', linestyle='--')
+            print('running')
+            ax.vlines(i, np.min(samples), (np.min(samples)*.9), color='red', linestyle='--')
 
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png')  # You can choose a different format if needed
