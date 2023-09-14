@@ -133,6 +133,38 @@ song_dict = {}
 music_player = MusicPlayer()
 
 
+def add_to_queue():
+    selected_index = songs_list.curselection()
+    queue_list.insert(tk.END, songs_list.get(selected_index))
+
+
+def remove_from_queue():
+    selected_index = queue_list.curselection()
+    if selected_index[0] >= 4:
+        queue_list.delete(selected_index)
+
+
+def play_next_in_queue():
+    if queue_list.get(4) != '':
+        item = queue_list.get(4)
+        queue_list.delete(1)
+        queue_list.insert(1, item)
+        queue_list.delete(4)
+        paths = [[song_paths[i], i] for i in range(songs_list.size()) if item == songs_list.get(i)]
+        mixer.music.load(paths[0][0])
+        mixer.music.play()
+        songs_list.activate(paths[0][1])
+        t0 = time.time()
+        if music_player.musicPlayer is None:
+            music_player.create_musicPlayer_window(paths[0][0])
+        elif music_player.musicPlayer is not None:
+            root.after_cancel(music_player.slider_update_id)
+            music_player.on_musicPlayer_close()
+            music_player.create_musicPlayer_window(paths[0][0])
+        t1 = time.time()
+        print("Time elapsed: ", t1 - t0)
+
+
 def plotData(file_path):
     try:
         audio = AudioSegment.from_mp3(file_path)
@@ -268,7 +300,7 @@ def add_folder():
             songs_list.delete(2)
             songs_list.delete(2)
             average_length = (how_long / num_cycles) * len(os.listdir(folder_path))
-            songs_list.insert(2, f'Done in {round(average_length - how_long, 1)} seconds.')
+            songs_list.insert(2, f'Time left: {round(average_length - how_long, 1)} seconds.')
             songs_list.insert(3, f'Average time per song of {round(how_long / num_cycles, 2)} seconds.')
             root.update()
     print(f'Took {round(how_long, 2)} seconds to complete, with an average of '
@@ -314,6 +346,8 @@ def play():
     mixer.music.load(song_path)
     mixer.music.play()
     songs_list.activate(index)
+    queue_list.delete(1)
+    queue_list.insert(1, song_names[index])
     t0 = time.time()
     if music_player.musicPlayer is None:
         music_player.create_musicPlayer_window(song_path)
@@ -329,6 +363,8 @@ def play():
 def stop():
     mixer.music.stop()
     songs_list.selection_clear(tk.ACTIVE)
+    queue_list.delete(1)
+    queue_list.insert(1, '')
     if music_player.musicPlayer is not None:
         music_player.on_musicPlayer_close()
 
@@ -368,11 +404,6 @@ def back_key(*args):
 def enter_key(*args):
     move_selection_down()
 
-def add_to_queue():
-    pass
-
-def remove_from_queue():
-    pass
 
 # creating the root window
 root = tk.Tk()
@@ -385,13 +416,13 @@ songs_list = tk.Listbox(root, selectmode=tk.SINGLE, bg="black", fg="white", font
                         selectbackground="gray", selectforeground="black")
 songs_list.grid(columnspan=9, sticky="w")
 
-queue_list = tk.Listbox(root, selectmode=tk.DISABLED, bg="black", fg="white", font=('arial', 15), height=12, width=28,
+queue_list = tk.Listbox(root, selectmode=tk.DISABLED, bg="black", fg="white", font=('arial', 15), height=12, width=37,
                         selectbackground="gray", selectforeground="black")
 queue_list.insert(0, 'Currently playing:')
 queue_list.insert(1, '')
 queue_list.insert(2, '')
 queue_list.insert(3, 'Next:')
-queue_list.grid(columnspan=2, column=6, row=0)
+queue_list.grid(columnspan=3, column=6, row=0)
 
 # font is defined which is to be used for the button font
 defined_font = font.Font(family='Helvetica')
@@ -436,6 +467,10 @@ add_to_queue_button = tk.Button(root, text="remove from queue", width=16, comman
 add_to_queue_button['font'] = defined_font
 add_to_queue_button.grid(row=10, column=7)
 
+# play_next_in_queue button
+add_to_queue_button = tk.Button(root, text="play next", width=7, command=play_next_in_queue)
+add_to_queue_button['font'] = defined_font
+add_to_queue_button.grid(row=10, column=8)
 
 # menu
 my_menu = tk.Menu(root)
