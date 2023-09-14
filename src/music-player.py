@@ -74,7 +74,7 @@ class MusicPlayer:
         self.slider = tk.Scale(self.musicPlayer, from_=0, to=self.audio.duration_seconds, orient="horizontal",
                                resolution=1, length=655)
         self.slider.set(0)
-        self.slider.place(x=85, y=220)
+        self.slider.place(x=75, y=220)
 
         self.musicPlayer.update_idletasks()
 
@@ -170,8 +170,7 @@ def plotData(file_path):
         # Add light vertical lines every 5 seconds
         interval_seconds = 5
         for i in range(0, int(duration_seconds) + 1, interval_seconds):
-            print('running')
-            ax.vlines(i, np.min(samples), (np.min(samples)*.9), color='red', linestyle='--')
+            ax.vlines(i, np.min(samples), (np.min(samples) * .9), color='darkgray', linestyle='--')
 
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png')  # You can choose a different format if needed
@@ -230,10 +229,12 @@ def move_selection_down(*event):
         songs_list.selection_set(0)
 
 
-def toggle_loading(started):
+def toggle_loading(started, ammElems):
     if started:
         songs_list.delete(0, tk.END)
         songs_list.insert(tk.END, "Loading...")
+        songs_list.insert(tk.END, '')
+        songs_list.insert(tk.END, f'(Should be done in roughly {round(ammElems * 1.7, 2)} seconds.)')
         mixer.music.pause()
         songs_list.master.update()
     else:
@@ -247,19 +248,32 @@ def add_folder():
     folder_path = filedialog.askdirectory(initialdir="Music/", title="Choose a folder")
     if folder_path == '':
         return None
-    toggle_loading(True)
+    toggle_loading(True, len(os.listdir(folder_path)))
+    how_long = 0
+    num_cycles = 0
     for song_file in os.listdir(folder_path):
         print(f'song_file {song_file}')
         if song_file.endswith(".mp3"):
+            t0 = time.time()
             song_name = os.path.splitext(os.path.basename(song_file))[0]
             song_names.append(song_name)  # Add the song name to the list
             song_path = os.path.join(folder_path, song_file)
             song_paths.append(song_path)  # Add the full file path to the list
-            songs_list.insert(tk.END, song_name)  # Display the song name in the listbox
             buffer = plotData(song_path)
             location, saved_audio = save_data_to_tempfile(song_path, buffer)
             song_dict[song_path] = [location, saved_audio]
-    toggle_loading(False)
+            t1 = time.time()
+            how_long += (t1 - t0)
+            num_cycles += 1
+            songs_list.delete(2)
+            songs_list.delete(2)
+            average_length = (how_long / num_cycles) * len(os.listdir(folder_path))
+            songs_list.insert(2, f'Done in {round(average_length - how_long, 1)} seconds.')
+            songs_list.insert(3, f'Average time per song of {round(how_long / num_cycles, 2)} seconds.')
+            root.update()
+    print(f'Took {round(how_long, 2)} seconds to complete, with an average of '
+          f'{round((how_long / len(os.listdir(folder_path))), 2)} seconds per song.')
+    toggle_loading(False, 1)
 
 
 # add a song to the playlist
@@ -268,7 +282,9 @@ def add_songs():
                                            filetypes=(("mp3 Files", "*.mp3"),))
     if file_path == '':
         return None
-    toggle_loading(True)
+    toggle_loading(True, 1)
+    how_long = 0
+    t0 = time.time()
     song_paths.append(file_path)
     song_names.append(os.path.splitext(os.path.basename(file_path))[0])
     songs_list.insert(tk.END, song_names[-1])
@@ -277,7 +293,10 @@ def add_songs():
     print('saving')
     location, saved_audio = save_data_to_tempfile(file_path, buffer)
     song_dict[file_path] = [location, saved_audio]
-    toggle_loading(False)
+    t1 = time.time()
+    how_long += (t1 - t0)
+    print(f'Took {round(how_long, 2)} seconds to complete.')
+    toggle_loading(False, 1)
 
 
 def delete_song():
@@ -295,14 +314,15 @@ def play():
     mixer.music.load(song_path)
     mixer.music.play()
     songs_list.activate(index)
+    t0 = time.time()
     if music_player.musicPlayer is None:
-        t0 = time.time()
         music_player.create_musicPlayer_window(song_path)
-        t1 = time.time()
-        print("Time elapsed: ", t1 - t0)
     elif music_player.musicPlayer is not None:
+        root.after_cancel(music_player.slider_update_id)
         music_player.on_musicPlayer_close()
         music_player.create_musicPlayer_window(song_path)
+    t1 = time.time()
+    print("Time elapsed: ", t1 - t0)
 
 
 # to stop the  song
@@ -348,6 +368,11 @@ def back_key(*args):
 def enter_key(*args):
     move_selection_down()
 
+def add_to_queue():
+    pass
+
+def remove_from_queue():
+    pass
 
 # creating the root window
 root = tk.Tk()
@@ -358,7 +383,15 @@ mixer.init()
 # create the listbox to contain songs
 songs_list = tk.Listbox(root, selectmode=tk.SINGLE, bg="black", fg="white", font=('arial', 15), height=12, width=47,
                         selectbackground="gray", selectforeground="black")
-songs_list.grid(columnspan=9)
+songs_list.grid(columnspan=9, sticky="w")
+
+queue_list = tk.Listbox(root, selectmode=tk.DISABLED, bg="black", fg="white", font=('arial', 15), height=12, width=28,
+                        selectbackground="gray", selectforeground="black")
+queue_list.insert(0, 'Currently playing:')
+queue_list.insert(1, '')
+queue_list.insert(2, '')
+queue_list.insert(3, 'Next:')
+queue_list.grid(columnspan=2, column=6, row=0)
 
 # font is defined which is to be used for the button font
 defined_font = font.Font(family='Helvetica')
@@ -366,32 +399,43 @@ defined_font = font.Font(family='Helvetica')
 # play button
 play_button = tk.Button(root, text="play", width=7, command=play)
 play_button['font'] = defined_font
-play_button.grid(row=1, column=0)
+play_button.grid(row=10, column=0)
 
 # stop button
 stop_button = tk.Button(root, text="stop", width=7, command=stop)
 stop_button['font'] = defined_font
-stop_button.grid(row=1, column=1)
+stop_button.grid(row=10, column=1)
 
 # pause button
 pause_button = tk.Button(root, text="pause", width=7, command=pause)
 pause_button['font'] = defined_font
-pause_button.grid(row=1, column=3)
+pause_button.grid(row=10, column=3)
 
 # resume button
 Resume_button = tk.Button(root, text="resume", width=7, command=resume)
 Resume_button['font'] = defined_font
-Resume_button.grid(row=1, column=2)
+Resume_button.grid(row=10, column=2)
 
 # previous_song button
 previous_button = tk.Button(root, text="prev", width=7, command=move_selection_up)
 previous_button['font'] = defined_font
-previous_button.grid(row=1, column=4)
+previous_button.grid(row=10, column=4)
 
 # next_song button
 next_button = tk.Button(root, text="next", width=7, command=move_selection_down)
 next_button['font'] = defined_font
-next_button.grid(row=1, column=5)
+next_button.grid(row=10, column=5)
+
+# add_to_queue button
+add_to_queue_button = tk.Button(root, text="add to queue", width=11, command=add_to_queue)
+add_to_queue_button['font'] = defined_font
+add_to_queue_button.grid(row=10, column=6, sticky='w')
+
+# remove_from_queue button
+add_to_queue_button = tk.Button(root, text="remove from queue", width=16, command=remove_from_queue)
+add_to_queue_button['font'] = defined_font
+add_to_queue_button.grid(row=10, column=7)
+
 
 # menu
 my_menu = tk.Menu(root)
